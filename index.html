@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Gann Terminal — Gamma X</title>
+
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#0a0e16">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GannTerm">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+
+<script src="https://unpkg.com/lightweight-charts@5.2.0/dist/lightweight-charts.standalone.production.js"></script>
+
+<style>
+  :root{
+    --bg:#0a0e16; --panel:#12182a; --panel2:#161d33; --border:#232b42;
+    --text:#f0f3fa; --muted:#a3aec4; --dim:#6b7690;
+    --accent:#ff8c3b; --support:#2dd4a7; --resistance:#ef5975; --gold:#f5c451;
+    --mono:'JetBrains Mono','SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding-bottom:40px;}
+
+  .topbar{position:sticky;top:0;z-index:10;background:linear-gradient(180deg,#0a0e16 88%,transparent);
+    padding:14px 16px 10px;border-bottom:1px solid var(--border);backdrop-filter:blur(6px);}
+  .brand{display:flex;align-items:center;gap:8px;font-size:19px;font-weight:700;letter-spacing:-0.02em;}
+  .brand .x{color:var(--accent);}
+  .brand .tag{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    border:1px solid var(--border);border-radius:20px;padding:2px 8px;}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+  select,input[type=url]{background:var(--panel2);color:var(--text);border:1px solid var(--border);
+    border-radius:10px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;}
+  select:focus,input:focus{border-color:var(--accent);}
+  .btn{background:var(--accent);color:#1a0e00;border:none;border-radius:10px;padding:9px 16px;
+    font-weight:700;font-size:14px;cursor:pointer;}
+  .btn:active{transform:scale(0.97);}
+  .btn.on{background:var(--support);}
+  .btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--border);font-weight:600;}
+  .meta{color:var(--muted);font-size:11.5px;margin-top:10px;font-weight:500;}
+  .alert-status{font-size:11.5px;margin-top:6px;font-weight:600;}
+
+  .lean-card{border-radius:16px;padding:16px;margin:12px 16px 4px;border:2px solid;}
+  .lean-card.ce{background:linear-gradient(135deg,#2dd4a726,#2dd4a70a);border-color:var(--support);}
+  .lean-card.pe{background:linear-gradient(135deg,#ef597526,#ef59750a);border-color:var(--resistance);}
+  .lean-top{display:flex;justify-content:space-between;align-items:center;}
+  .lean-label{font-size:22px;font-weight:800;letter-spacing:.01em;}
+  .lean-card.ce .lean-label{color:var(--support);}
+  .lean-card.pe .lean-label{color:var(--resistance);}
+  .lean-conf{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:4px 10px;border-radius:20px;}
+  .lean-conf.HIGH{background:var(--support);color:#04231a;}
+  .lean-conf.MEDIUM{background:var(--gold);color:#2a1c00;}
+  .lean-conf.LOW{background:var(--panel2);color:var(--muted);border:1px solid var(--border);}
+  .lean-score{font-family:var(--mono);font-size:12px;color:var(--text);margin-top:6px;font-weight:600;}
+  .lean-reasons{margin-top:10px;text-align:left;}
+  .lean-reasons div{font-size:12px;color:var(--text);padding:4px 0;border-top:1px solid rgba(255,255,255,.08);line-height:1.5;font-weight:500;}
+
+  .engine-tag{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+    padding:2px 8px;border-radius:20px;margin-left:6px;vertical-align:middle;}
+  .engine-tag.CONFLUENCE{background:var(--gold);color:#2a1c00;}
+  .engine-tag.HULL_OB{background:var(--support);color:#04231a;}
+  .engine-tag.SWEEP{background:var(--accent);color:#1a0e00;}
+
+  .steps-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;margin:10px 16px 4px;}
+  .steps-card h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 8px;font-weight:700;}
+  .step{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--border);font-size:12.5px;line-height:1.45;}
+  .step:first-of-type{border-top:none;}
+  .step .dot{flex-shrink:0;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:800;background:var(--panel2);color:var(--dim);border:1px solid var(--border);margin-top:1px;}
+  .step.done .dot{background:var(--support);color:#04231a;border-color:var(--support);}
+  .step.active .dot{background:var(--gold);color:#2a1c00;border-color:var(--gold);animation:pulse 1.2s infinite;}
+  .step.done{color:var(--text);} .step.active{color:var(--gold);font-weight:700;} .step{color:var(--muted);}
+  .step .lvl{font-family:var(--mono);font-weight:700;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+
+  .level-row{display:flex;gap:8px;padding:0 16px 8px;flex-wrap:wrap;}
+  .level-chip{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:7px 11px;font-family:var(--mono);font-size:11px;font-weight:700;flex:1;min-width:70px;text-align:center;}
+  .level-chip .l{color:var(--dim);font-size:9px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-bottom:2px;}
+  .level-chip.bsl{color:var(--resistance);} .level-chip.ssl{color:var(--support);}
+  .level-chip.ob-bull{color:var(--support);} .level-chip.ob-bear{color:var(--resistance);}
+
+  .trigger-banner{border-radius:14px;padding:13px 16px;margin:10px 16px 4px;text-align:center;font-weight:700;font-size:14px;border:1px solid var(--border);}
+  .trigger-banner.confirmed{background:linear-gradient(135deg,#2dd4a71f,#2dd4a70a);border-color:var(--support);color:var(--support);}
+  .trigger-banner.confirmed.pe{background:linear-gradient(135deg,#ef59751f,#ef59750a);border-color:var(--resistance);color:var(--resistance);}
+  .trigger-banner.early{background:linear-gradient(135deg,#f5c45122,#f5c45108);border-color:var(--gold);color:var(--gold);}
+  .trigger-banner.conflict{background:linear-gradient(135deg,#ef597522,#ef597508);border-color:var(--resistance);color:var(--resistance);}
+  .trigger-banner.none{background:var(--panel2);color:var(--muted);border-color:var(--border);font-weight:500;font-size:12.5px;}
+  .trigger-sub{font-size:11px;font-weight:500;color:var(--muted);margin-top:4px;}
+
+  .tf-row{display:flex;gap:6px;padding:10px 16px 4px;align-items:center;}
+  .tf-row .lbl{font-size:11px;color:var(--dim);font-weight:700;}
+  .tf-btn{background:var(--panel2);color:var(--muted);border:1px solid var(--border);border-radius:10px;
+    padding:8px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--mono);}
+  .tf-btn.active{background:var(--accent);color:#1a0e00;border-color:var(--accent);}
+
+  #chartWrap{margin:8px 16px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--panel);}
+  #chart{height:340px;width:100%;}
+  #chart.stale{opacity:.5;}
+  .chart-head{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);}
+  .chart-title{font-family:var(--mono);font-size:13px;font-weight:700;}
+  .chart-stale{font-size:10px;color:var(--gold);font-weight:700;}
+
+  .section{padding:12px 16px 4px;}
+  .section h2{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 8px;font-weight:700;}
+
+  .strike-scroll{display:flex;overflow-x:auto;gap:8px;padding:2px 2px 8px;scrollbar-width:none;}
+  .strike-scroll::-webkit-scrollbar{display:none;}
+  .strike-chip{flex-shrink:0;background:var(--panel);border:1px solid var(--border);border-radius:12px;
+    padding:10px 13px;text-align:center;cursor:pointer;min-width:80px;}
+  .strike-chip .px{font-family:var(--mono);font-weight:700;font-size:14px;}
+  .strike-chip .ltp{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px;}
+  .strike-chip.atm{border-color:var(--gold);}
+  .strike-chip.selected{border-color:var(--accent);background:#ff8c3b1a;}
+  .strike-chip.selected .px{color:var(--accent);}
+
+  .detail-card,.check-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;margin:0 16px 10px;}
+  .price-row{display:flex;gap:8px;margin-top:8px;}
+  .price-box{flex:1;background:var(--panel2);border-radius:10px;padding:9px;text-align:center;}
+  .price-box .l{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:700;}
+  .price-box .v{font-family:var(--mono);font-size:15px;font-weight:800;margin-top:2px;}
+  .pos{color:var(--support);} .neg{color:var(--resistance);}
+  .greeks-line{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:10px;line-height:1.8;font-weight:600;}
+
+  .check-item{font-size:13px;padding:6px 0;border-top:1px solid var(--border);font-weight:500;}
+  .check-item:first-of-type{border-top:none;}
+  .ok{color:var(--support);font-weight:800;} .no{color:var(--resistance);font-weight:800;} .warn{color:var(--gold);font-weight:800;}
+
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:24px 16px;line-height:1.6;}
+  .footer-note{color:var(--muted);font-size:11px;padding:16px 16px 0;line-height:1.6;border-top:1px solid var(--border);margin-top:12px;font-weight:500;}
+  .attr{font-size:10px;text-align:center;padding:8px;}
+  .attr a{color:var(--dim);text-decoration:none;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="x">Γ</span> Gann Terminal <span class="tag">Gamma X</span></div>
+  <div class="row">
+    <select id="idxSelect">
+      <option value="NIFTY">NIFTY</option>
+      <option value="SENSEX">SENSEX</option>
+    </select>
+    <input type="url" id="backendUrl" placeholder="https://your-backend.onrender.com" style="flex:1;min-width:150px;">
+    <button class="btn" id="refreshBtn">Refresh</button>
+  </div>
+  <div class="row">
+    <button class="btn" id="alertBtn" style="flex:1;">🔔 Enable Signal Alarms</button>
+    <button class="btn ghost" id="testAlertBtn">Test</button>
+  </div>
+  <div class="meta" id="metaLine">Enter your Gamma X backend URL to start (shared across all Gamma X apps).</div>
+  <div class="alert-status" id="alertStatus" style="color:var(--dim);">Alarms not enabled — signals only show while this app is open.</div>
+</div>
+
+<div class="lean-card" id="leanCard">
+  <div class="lean-top">
+    <div class="lean-label" style="color:var(--dim);font-size:15px;">No data yet.</div>
+  </div>
+</div>
+
+<div class="trigger-banner none" id="triggerBanner">No data yet.</div>
+
+<div class="steps-card" id="stepsCard"><div class="empty">No data yet.</div></div>
+
+<div class="tf-row">
+  <span class="lbl">TF</span>
+  <button class="tf-btn active" data-tf="3m">3m</button>
+  <button class="tf-btn" data-tf="5m">5m</button>
+  <button class="tf-btn" data-tf="15m">15m</button>
+</div>
+
+<div id="chartWrap">
+  <div class="chart-head">
+    <div class="chart-title" id="chartTitle">—</div>
+    <div class="chart-stale" id="chartStale"></div>
+  </div>
+  <div id="chart"></div>
+</div>
+
+<div class="level-row" id="levelRow"></div>
+
+<div class="section">
+  <h2 id="strikesTitle">Strikes</h2>
+  <div class="strike-scroll" id="strikeScroll"><div class="empty">No data yet.</div></div>
+</div>
+
+<div class="detail-card" id="detailCard"><div class="empty">Select a strike…</div></div>
+<div class="check-card" id="checkCard"><div class="empty">No signal data yet.</div></div>
+
+<div class="footer-note">
+  <b style="color:var(--text)">Gann Terminal</b> automates your manual workflow: the 09:15–09:30 opening-range
+  swing high/low becomes the box; ratio levels 0 / 0.26 / 0.382 / 0.5 / 0.618 / 0.7 / 1 (plus ±ext) are projected
+  from it. Every level is then scored with the full options dataset — OI walls, level confluence
+  (OI/gamma/IV/vol/history), gamma-flip zone, dealer pressure, order flow — to answer "which level will it turn
+  from?": each gets a strength /100 and, when price reaches it, a <b style="color:var(--text)">BOUNCE vs BREAK
+  verdict</b>. Entry = a fresh RSI(14)xSMA(9) cross AT the level agreeing with the verdict. Alerts: 📐 AT LEVEL
+  (soft) and ✅ GANN ENTRY (strong). Signals are probabilistic and NOT backtested — paper-trade and log outcomes
+  before risking real capital.
+</div>
+<div class="attr"><a href="https://www.tradingview.com/" target="_blank" rel="noopener">Charts by TradingView Lightweight Charts</a></div>
+
+<audio id="alarmAudio" preload="auto">
+  <source src="data:audio/wav;base64,UklGRoQCAQBXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0YWACAQAAAKwkGkWHXSBrUmz4YGRKMysBBwHiecBMpoKW75L9m6Cwc84E8jIXsjmDVW1nXm2lZglUsjfoFLPvYcwJrxGbyJIml6enZMJC5FYJVi0XTAdinmyhakxcRkN3Iqr9ItkauUihbZQHlCKgV7f11lT7PSBrQQVbFmrebAtjwE10L6oLh+ZWxA2p1pevkjCae61UymXtmxKsNYVS0GVRbSpo81aqO3kZVvSM0ECy9Zwik+qV+6SVvsPfrAQLKalI3l/5a5NruF7mRt4mVgKJ3bq8tKNflWKT+Z3ps6rSqva+G5w9WVjaaDht72T3UJ8zTRAY607I96tbmaKSk5h9qk7Gzuj8DY0xYE8DZBFtfmm0WYc//x3/+M3UnLUIn66T4JR5oua6VNsA" type="audio/wav">
+</audio>
+
+<script>
+const $ = id => document.getElementById(id);
+const nf = new Intl.NumberFormat('en-IN', {maximumFractionDigits: 2});
+const fmt = n => (n == null || isNaN(n)) ? '—' : nf.format(n);
+const rup = n => (n == null || isNaN(n)) ? '—' : '₹' + nf.format(n);
+
+function loadBackend(){ return localStorage.getItem('gx_backend_url') || ''; }
+function saveBackend(v){ localStorage.setItem('gx_backend_url', v); }
+$('backendUrl').value = loadBackend();
+$('backendUrl').addEventListener('change', e => { saveBackend(e.target.value.trim()); refreshAll(); });
+
+let tf = '3m', side = 'CE', selStrike = null, lastSignal = null;
+
+const VAPID_PUBLIC_KEY = 'BHr70wzlbgEPlKPzFdstO0jFvWGETTS_iIHYH90vT1sZ5A7C6M-QbQvHA0Ee8neAqHxO6esG2vnqVtPEsb22ZYk';
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+let swReg = null;
+async function initServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    swReg = await navigator.serviceWorker.register('./sw.js');
+    const sub = await swReg.pushManager.getSubscription();
+    updateAlertStatusUI(!!sub);
+  } catch (e) { console.log('SW init failed:', e.message); }
+}
+function updateAlertStatusUI(enabled) {
+  const btn = $('alertBtn'), status = $('alertStatus');
+  if (enabled) {
+    btn.textContent = 'Alarms Enabled ✓'; btn.classList.add('on');
+    status.textContent = 'ARMED — push alert fires the moment a fresh entry trigger confirms, even with the app closed.';
+    status.style.color = 'var(--support)';
+  } else {
+    btn.textContent = '🔔 Enable Signal Alarms'; btn.classList.remove('on');
+    status.textContent = 'Alarms not enabled — signals only show while this app is open.';
+    status.style.color = 'var(--dim)';
+  }
+}
+async function enableAlerts() {
+  const base = $('backendUrl').value.trim().replace(/\/+$/,'');
+  if (!base) { alert('Enter your backend URL first'); return; }
+  if (!('Notification' in window)) { alert('This browser does not support notifications'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm !== 'granted') { alert('Notification permission denied — enable it in browser/site settings'); return; }
+  if (!swReg) swReg = await navigator.serviceWorker.register('./sw.js');
+  await navigator.serviceWorker.ready;
+  let sub = await swReg.pushManager.getSubscription();
+  if (!sub) sub = await swReg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY) });
+  try {
+    const r = await fetch(`${base}/subscribe`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subscription: sub }) });
+    const data = await r.json();
+    if (!data.success) throw new Error(data.error || 'subscribe failed');
+    updateAlertStatusUI(true);
+  } catch (err) { alert('Could not register with backend: ' + err.message); }
+}
+async function sendTestAlert() {
+  const base = $('backendUrl').value.trim().replace(/\/+$/,'');
+  if (!base) { alert('Enter your backend URL first'); return; }
+  try {
+    const r = await fetch(`${base}/test-push`, { method: 'POST' });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'test push failed');
+    alert('Test alert sent to ' + d.sentTo + ' device(s) — check your notifications.');
+  } catch (err) { alert('Test failed: ' + err.message); }
+}
+
+let lastFreshKey = null, lastLevelKey = null;
+function checkFreshAlarm(s) {
+  if (s.stale) return;
+  if (s.entryTrigger !== 'NONE') {
+    const key = s.index + '|' + s.tf + '|' + s.entryTrigger + '|' + (s.nearest ? s.nearest.name : '');
+    if (key !== lastFreshKey) {
+      lastFreshKey = key;
+      try { $('alarmAudio').play().catch(()=>{}); } catch(e){}
+      if (navigator.vibrate) navigator.vibrate([300,100,300,100,300,100,300]);
+    }
+  } else if (s.nearest && s.nearest.atLevel) {
+    const key = s.index + '|' + s.nearest.name + '|' + (s.nearest.dist >= 0 ? 'up' : 'dn');
+    if (key !== lastLevelKey) {
+      lastLevelKey = key;
+      try { $('alarmAudio').play().catch(()=>{}); } catch(e){}
+      if (navigator.vibrate) navigator.vibrate([200,80,200]);
+    }
+  }
+}
+
+const chart = LightweightCharts.createChart($('chart'), {
+  autoSize: true,
+  layout: { background: { color: '#12182a' }, textColor: '#a3aec4',
+    fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 11 },
+  grid: { vertLines: { color: '#1c2440' }, horzLines: { color: '#1c2440' } },
+  timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#232b42',
+    tickMarkFormatter: (t) => { const ist = new Date(t*1000 + 5.5*3600*1000); return String(ist.getUTCHours()).padStart(2,'0')+':'+String(ist.getUTCMinutes()).padStart(2,'0'); } },
+  rightPriceScale: { borderColor: '#232b42' },
+  crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+  handleScroll: true, handleScale: true
+});
+const candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+  upColor: '#2dd4a7', downColor: '#ef5975', wickUpColor: '#2dd4a7', wickDownColor: '#ef5975', borderVisible: false
+});
+const hullSeries = chart.addSeries(LightweightCharts.LineSeries, {
+  color: '#ff8c3b', lineWidth: 2, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false
+});
+const seriesMarkers = LightweightCharts.createSeriesMarkers(candleSeries, []);
+let levelLines = []; // active BSL/SSL/OB price lines — cleared + redrawn each load
+function clearLevelLines(){ levelLines.forEach(l => candleSeries.removePriceLine(l)); levelLines = []; }
+function addLevelLine(price, color, title){
+  if (price == null) return;
+  levelLines.push(candleSeries.createPriceLine({ price, color, lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title }));
+}
+
+document.querySelectorAll('.tf-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.tf-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    tf = b.dataset.tf;
+    refreshAll();
+  });
+});
+
+async function fetchJSON(url, { retries = 1, label = 'backend' } = {}) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try { const r = await fetch(url); return await r.json(); }
+    catch (err) {
+      if (attempt === retries) throw err;
+      $('metaLine').textContent = label + ' is warming up (first call can take 20-30s) — retrying…';
+      await new Promise(res => setTimeout(res, 4000));
+    }
+  }
+}
+
+function renderLean(s){
+  const card = $('leanCard');
+  const lean = s.lean || { side: s.side, score: 0, confidence: 'LOW' };
+  card.className = 'lean-card ' + (s.side === 'PE' ? 'pe' : 'ce');
+  const arrow = s.side === 'CE' ? '▲' : '▼';
+  card.innerHTML = `
+    <div class="lean-top">
+      <div class="lean-label">${arrow} ${s.side === 'CE' ? 'CALL' : 'PUT'} side</div>
+      <div class="lean-conf ${lean.confidence}">${lean.confidence}</div>
+    </div>
+    <div class="lean-score">Lean score ${lean.score >= 0 ? '+' : ''}${lean.score} · quality ${s.score}/100</div>
+    <div class="lean-reasons">${(s.reasons||[]).map(r=>`<div>• ${r}</div>`).join('')}</div>`;
+}
+
+function renderTrigger(s){
+  const b=$('triggerBanner'); const nr=s.nearest;
+  if(s.entryTrigger==='BUY_CE'||s.entryTrigger==='BUY_PE'){
+    b.className='trigger-banner confirmed'+(s.entryTrigger==='BUY_PE'?' pe':'');
+    b.innerHTML=`✅ GANN ENTRY — ${s.entryTrigger==='BUY_CE'?'CALL':'PUT'} · RSI cross AT ${nr?nr.name:''} <b>${nr?fmt(nr.price):''}</b><div class="trigger-sub">${nr&&nr.verdict?nr.verdict.replace('_',' '):''} · level strength ${nr?nr.strength:'—'}/100</div>`;
+  } else if(nr&&nr.atLevel){
+    b.className='trigger-banner early';
+    b.innerHTML=`📐 AT LEVEL — ${nr.name} <b>${fmt(nr.price)}</b> · verdict: ${(nr.verdict||'CONTESTED').replace('_',' ')}<div class="trigger-sub">Strength ${nr.strength}/100 · waiting for the RSI(14)xSMA(9) cross to confirm</div>`;
+  } else {
+    b.className='trigger-banner none';
+    b.innerHTML=nr?`No level test — nearest: ${nr.name} ${fmt(nr.price)} (${nr.dist>0?'+':''}${fmt(nr.dist)} away)`:'Opening range not formed yet.';
+  }
+}
+
+const RATIO_COLORS={'-0.5':'#a78bfa','-0.26':'#a78bfa','0':'#9aa3b5','0.26':'#ff9f1a','0.382':'#5ad0e0','0.5':'#4caf50','0.618':'#5ad0e0','0.7':'#3b82f6','1':'#9aa3b5','1.26':'#a78bfa','1.5':'#a78bfa'};
+const VERDICT_TXT={BOUNCE_UP:'🟢 Bounce UP',BOUNCE_DOWN:'🔴 Bounce DOWN',BREAK_UP:'🟢 Break UP',BREAK_DOWN:'🔴 Break DOWN',CONTESTED:'⚔️ Contested'};
+function renderSteps(s){
+  const or_=s.openingRange, lv=s.levels||[];
+  if(!or_||!lv.length){ $('stepsCard').innerHTML='<h2>Gann Levels — 09:15–09:30 box</h2><div class="empty">'+(s.warn||'Opening range not formed yet.')+'</div>'; return; }
+  const rows=[...lv].sort((a,b)=>b.price-a.price).map(g=>{
+    const c=RATIO_COLORS[String(g.ratio)]||'#9aa3b5';
+    const hl=g.atLevel?'style="background:rgba(245,196,81,.10);border-radius:8px;"':'';
+    return `<div class="step" ${hl}><div class="dot" style="background:${c};color:#0a0e16;border-color:${c};">${g.ratio}</div>
+      <div style="flex:1"><b>${g.name}</b> · <span class="lvl">${fmt(g.price)}</span> · str <b>${g.strength}</b>/100
+      ${g.atLevel?' · <b style="color:var(--gold)">AT LEVEL</b> '+(VERDICT_TXT[g.verdict]||''):''}
+      ${g.notes&&g.notes.length?'<div style="color:var(--muted);font-size:11px;">'+g.notes.slice(0,2).join(' · ')+'</div>':''}</div></div>`;
+  }).join('');
+  $('stepsCard').innerHTML='<h2>Gann Levels — box '+fmt(or_.low)+'–'+fmt(or_.high)+' ('+or_.date+')</h2>'+rows;
+}
+
+async function refreshSignal(){
+  const base = $('backendUrl').value.trim().replace(/\/+$/,'');
+  const idx = $('idxSelect').value;
+  if(!base){ $('metaLine').textContent = 'Enter your backend URL first.'; return null; }
+  try{
+    const s = await fetchJSON(`${base}/gann-signal?index=${idx}&tf=${tf}`, { retries: 1, label: 'Signal engine' });
+    if (s.error) throw new Error(s.error);
+    if (s.warn) {
+      $('metaLine').textContent = s.warn;
+      $('leanCard').innerHTML = `<div class="lean-label" style="color:var(--dim);font-size:14px;">${s.warn}</div>`;
+      return null;
+    }
+    lastSignal = s;
+    side = s.side;
+    $('metaLine').textContent = `${idx} · ${tf} · spot ${fmt(s.spot)} · updated ${new Date().toLocaleTimeString('en-IN')}${s.stale ? ' · STALE (market closed)' : ''}`;
+
+    renderLean(s);
+    renderTrigger(s);
+    renderSteps(s);
+    checkFreshAlarm(s);
+    renderStrikes(s);
+    renderChecklist(s);
+    return s;
+  }catch(err){
+    $('metaLine').textContent = 'Error: ' + err.message;
+    return null;
+  }
+}
+
+function renderStrikes(s){
+  const list = s.strikes || [];
+  $('strikesTitle').innerHTML = (s.side === 'PE' ? 'PUT' : 'CALL') + ' Strikes <span style="color:var(--muted);font-weight:500;text-transform:none;letter-spacing:0;"> · ATM + 5 OTM · tap to load chart</span>';
+  if(!list.length){ $('strikeScroll').innerHTML = '<div class="empty">No strikes available right now.</div>'; return; }
+  $('strikeScroll').innerHTML = list.map((k, i) => `
+    <div class="strike-chip ${i===0?'atm':''} ${selStrike===k.strike?'selected':''}" data-strike="${k.strike}">
+      <div class="px">${fmt(k.strike)}</div>
+      <div class="ltp">${k.ltp != null ? rup(k.ltp) : (k.fairValue != null ? rup(k.fairValue) : '—')}</div>
+    </div>`).join('');
+  document.querySelectorAll('.strike-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      selStrike = parseFloat(chip.dataset.strike);
+      document.querySelectorAll('.strike-chip').forEach(x => x.classList.remove('selected'));
+      chip.classList.add('selected');
+      renderDetail(list.find(x => x.strike === selStrike));
+      loadChart(selStrike, side);
+    });
+  });
+  if(selStrike == null || !list.find(x => x.strike === selStrike)){
+    selStrike = list[0].strike;
+    document.querySelector('.strike-chip') && document.querySelector('.strike-chip').classList.add('selected');
+    renderDetail(list[0]);
+    loadChart(selStrike, side);
+  }
+}
+
+function renderDetail(k){
+  if(!k){ $('detailCard').innerHTML = '<div class="empty">Select a strike…</div>'; return; }
+  const edgeCls = k.edge == null ? '' : (k.edge >= 0 ? 'pos' : 'neg');
+  $('detailCard').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:baseline;">
+      <div style="font-family:var(--mono);font-size:19px;font-weight:800;">${fmt(k.strike)} ${k.type}</div>
+      <div style="font-size:11px;color:var(--muted);font-weight:600;">Prob ITM ${k.probITM != null ? fmt(k.probITM)+'%' : '—'}</div>
+    </div>
+    <div class="price-row">
+      <div class="price-box"><div class="l">Fair Value</div><div class="v">${rup(k.fairValue)}</div></div>
+      <div class="price-box"><div class="l">LTP</div><div class="v">${rup(k.ltp)}</div></div>
+      <div class="price-box"><div class="l">Edge</div><div class="v ${edgeCls}">${k.edge != null ? (k.edge>=0?'+':'')+fmt(k.edge) : '—'}</div></div>
+      <div class="price-box"><div class="l">Target</div><div class="v">${rup(k.targetPrice)}</div></div>
+    </div>
+    <div class="greeks-line">Δ ${k.delta != null ? k.delta.toFixed(3) : '—'} · Γ ${k.gamma != null ? k.gamma.toFixed(5) : '—'} · Θ/day ${k.theta != null ? k.theta.toFixed(2) : '—'} · Vega ${k.vega != null ? k.vega.toFixed(2) : '—'} · IV ${k.iv != null ? fmt(k.iv)+'%' : '—'}</div>`;
+}
+
+function renderChecklist(s){
+  const ch = s.checklist || {};
+  const row = (ok, label) => `<div class="check-item"><span class="${ok?'ok':'no'}">${ok?'✓':'✗'}</span> ${label}</div>`;
+  $('checkCard').innerHTML = `
+    <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 6px;font-weight:700;">Entry Checklist</h2>
+    ${row(ch.signalFired, 'GANN ENTRY confirmed (RSI cross AT a scored level)')}
+    ${row(ch.atLevel, 'Price is AT a Gann level (not mid-air)')}\n    ${ch.levelStrong ? '<div class="check-item"><span class="ok">🧱</span> Level has heavy OI/Greeks confluence (strength 45+)</div>' : '<div class="check-item"><span class="warn">–</span> Level strength is low — weaker bounce odds</div>'}\n    ${row(ch.rsiCross, 'Fresh RSI(14)xSMA(9) cross (within 3 bars)')}
+    ${row(ch.leanAligned, 'Trigger aligned with Direction Lean (no conflict)')}
+    ${row(ch.edgePositive, 'Fair Value ≥ LTP — positive edge on nearest strike')}
+    ${row(ch.dealer, 'Dealer hedge pressure amplifying')}
+    ${row(ch.orderFlow, 'Order flow aligned with this side')}
+    ${row(ch.trend, 'Multi-day trend regime aligned')}
+    ${row(ch.vix, 'VIX regime not collapsing')}
+    <div class="check-item">${ch.thetaWarn
+      ? '<span class="warn">⚠</span> High theta bleed vs premium — treat as intraday-only'
+      : '<span class="ok">✓</span> Theta cost acceptable for the day'}</div>`;
+}
+
+async function loadChart(strike, type){
+  const base = $('backendUrl').value.trim().replace(/\/+$/,'');
+  const idx = $('idxSelect').value;
+  strike = strike != null ? strike : selStrike;
+  type = type || side;
+  if(!base || strike == null || !type) return;
+  $('chartTitle').textContent = 'Loading…';
+  try{
+    const d = await fetchJSON(`${base}/gann-candles?index=${idx}&tf=${tf}`, { retries: 1, label: 'Chart' });
+    if(!d.success) throw new Error(d.error || 'chart data error');
+    candleSeries.setData(d.candles);
+    hullSeries.setData(d.rsiSma ? [] : []); // hull line unused on this terminal
+    seriesMarkers.setMarkers((d.signals || []).map(sg => ({
+      time: sg.time, position: sg.side === 'BUY' ? 'belowBar' : 'aboveBar',
+      color: sg.side === 'BUY' ? '#2dd4a7' : '#ef5975',
+      shape: sg.side === 'BUY' ? 'arrowUp' : 'arrowDown', text: sg.side === 'BUY' ? 'B' : 'S'
+    })));
+    clearLevelLines();
+    (d.gann || []).forEach(g => addLevelLine(g.price, RATIO_COLORS[String(g.ratio)] || '#9aa3b5', String(g.ratio)));
+    renderLevelChips(d.openingRange);
+    chart.timeScale().scrollToRealTime();
+    $('chartTitle').textContent = `${d.index} SPOT · ${d.tf} · RSI(14)xSMA(9) crosses`;
+    $('chartStale').textContent = d.stale ? 'STALE — last session' : '';
+    $('chart').classList.toggle('stale', !!d.stale);
+  }catch(err){
+    $('chartTitle').textContent = 'Chart: ' + err.message;
+  }
+}
+
+function renderLevelChips(or_){
+  if(!or_){ $('levelRow').innerHTML='<div class="empty" style="padding:8px 0;">Opening range not formed yet.</div>'; return; }
+  $('levelRow').innerHTML=`
+    <div class="level-chip" style="color:var(--support)"><div class="l">Range Low (0)</div>${fmt(or_.low)}</div>
+    <div class="level-chip" style="color:var(--resistance)"><div class="l">Range High (1)</div>${fmt(or_.high)}</div>
+    <div class="level-chip" style="color:var(--gold)"><div class="l">Box size</div>${fmt(or_.range)}</div>`;
+}
+
+async function refreshAll(){ await refreshSignal(); }
+
+$('refreshBtn').addEventListener('click', refreshAll);
+$('idxSelect').addEventListener('change', () => { selStrike = null; refreshAll(); });
+$('alertBtn').addEventListener('click', enableAlerts);
+$('testAlertBtn').addEventListener('click', sendTestAlert);
+
+initServiceWorker();
+if(loadBackend()) refreshAll();
+setInterval(refreshAll, 25000);
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
